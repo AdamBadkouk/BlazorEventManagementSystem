@@ -1,4 +1,4 @@
-# EventEase - Event Management System
+# Event Management System
 
 A complete Blazor WebAssembly standalone application built with .NET 9.0 for managing and registering for events.
 
