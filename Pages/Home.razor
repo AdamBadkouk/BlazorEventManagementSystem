@@ -1,0 +1,116 @@
+@page "/"
+@inject EventService EventService
+@inject UserSessionService SessionService
+
+<PageTitle>EventEase - Home</PageTitle>
+
+<div class="home-page">
+    <section class="hero">
+        <h1>Discover Amazing Events</h1>
+        <p>Find and register for events that match your interests</p>
+
+        <div class="session-stats">
+            <div class="stat-card">
+                <span class="stat-number">@EventService.GetAllEvents().Count</span>
+                <span class="stat-label">Total Events</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">@SessionService.TotalRegistrations</span>
+                <span class="stat-label">Your Registrations</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">@GetAvailableEvents()</span>
+                <span class="stat-label">Available Now</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="filters">
+        <div class="filter-group">
+            <label>Filter by Category:</label>
+            <select @bind="SelectedCategory" class="form-control">
+                <option value="">All Categories</option>
+                @foreach (var category in GetCategories())
+                {
+                    <option value="@category">@category</option>
+                }
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>
+                <input type="checkbox" @bind="ShowOnlyAvailable" />
+                Show only available events
+            </label>
+        </div>
+    </section>
+
+    <section class="events-grid">
+        @foreach (var eventItem in GetFilteredEvents())
+        {
+            <EventCard Event="@eventItem"
+                      IsHighlighted="@HighlightedEventIds.Contains(eventItem.Id)"
+                      IsHighlightedChanged="@((highlighted) => HandleHighlightChanged(eventItem.Id, highlighted))" />
+        }
+    </section>
+
+    @if (!GetFilteredEvents().Any())
+    {
+        <div class="empty-state">
+            <span class="empty-icon">📭</span>
+            <h3>No events found</h3>
+            <p>Try adjusting your filters to see more events.</p>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Event> Events = new();
+    private List<int> HighlightedEventIds = new();
+    private string SelectedCategory = "";
+    private bool ShowOnlyAvailable = false;
+
+    protected override void OnInitialized()
+    {
+        Events = EventService.GetAllEvents();
+    }
+
+    private List<Event> GetFilteredEvents()
+    {
+        var filtered = Events.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(SelectedCategory))
+        {
+            filtered = filtered.Where(e => e.Category == SelectedCategory);
+        }
+
+        if (ShowOnlyAvailable)
+        {
+            filtered = filtered.Where(e => !e.IsFull);
+        }
+
+        return filtered.ToList();
+    }
+
+    private List<string> GetCategories()
+    {
+        return Events.Select(e => e.Category).Distinct().OrderBy(c => c).ToList();
+    }
+
+    private int GetAvailableEvents()
+    {
+        return Events.Count(e => !e.IsFull);
+    }
+
+    private void HandleHighlightChanged(int eventId, bool highlighted)
+    {
+        if (highlighted && !HighlightedEventIds.Contains(eventId))
+        {
+            HighlightedEventIds.Add(eventId);
+        }
+        else if (!highlighted)
+        {
+            HighlightedEventIds.Remove(eventId);
+        }
+    }
+}

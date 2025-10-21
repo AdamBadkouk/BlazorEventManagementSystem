@@ -1,0 +1,49 @@
+@inherits LayoutComponentBase
+@inject UserSessionService SessionService
+
+<div class="page">
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a href="/">
+                        <span class="logo-icon">🎉</span>
+                        <span class="logo-text">EventEase</span>
+                    </a>
+                </div>
+                <nav class="nav">
+                    <a href="/" class="nav-link">Events</a>
+                    <div class="user-session">
+                        <span class="user-icon">👤</span>
+                        <span class="user-name">@SessionService.UserName</span>
+                        <span class="badge">@SessionService.TotalRegistrations</span>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            @Body
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 EventEase. Built with Blazor WebAssembly & .NET 9.0</p>
+        </div>
+    </footer>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        SessionService.OnStateChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        SessionService.OnStateChanged -= StateHasChanged;
+    }
+}

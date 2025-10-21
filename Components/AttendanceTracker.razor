@@ -1,0 +1,76 @@
+@implements IDisposable
+
+<div class="attendance-tracker">
+    <div class="attendance-header">
+        <span class="attendance-label">Attendance</span>
+        <span class="attendance-count">@CurrentAttendees / @MaxAttendees</span>
+    </div>
+
+    <div class="progress-bar">
+        <div class="progress-fill @GetProgressClass()" style="width: @AttendancePercentage%">
+        </div>
+    </div>
+
+    <div class="attendance-stats">
+        <span class="stat-item">
+            <span class="stat-icon">✓</span>
+            <span>@AttendancePercentage% Full</span>
+        </span>
+        <span class="stat-item @(AvailableSpots <= 10 ? "urgent" : "")">
+            <span class="stat-icon">🎟️</span>
+            <span>@AvailableSpots spots left</span>
+        </span>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int EventId { get; set; }
+
+    [Parameter]
+    public int CurrentAttendees { get; set; }
+
+    [Parameter]
+    public int MaxAttendees { get; set; }
+
+    private System.Threading.Timer? _timer;
+    private int _animatedAttendees;
+
+    protected override void OnInitialized()
+    {
+        _animatedAttendees = CurrentAttendees;
+        StartRealTimeSimulation();
+    }
+
+    private int AvailableSpots => MaxAttendees - CurrentAttendees;
+
+    private string AttendancePercentage => MaxAttendees > 0
+        ? Math.Round((double)CurrentAttendees / MaxAttendees * 100, 1).ToString("F1")
+        : "0";
+
+    private string GetProgressClass()
+    {
+        var percentage = MaxAttendees > 0 ? (double)CurrentAttendees / MaxAttendees * 100 : 0;
+
+        if (percentage >= 90) return "progress-danger";
+        if (percentage >= 70) return "progress-warning";
+        return "progress-success";
+    }
+
+    private void StartRealTimeSimulation()
+    {
+        _timer = new System.Threading.Timer(async _ =>
+        {
+            if (CurrentAttendees < MaxAttendees && Random.Shared.Next(0, 100) < 5)
+            {
+                CurrentAttendees++;
+                await InvokeAsync(StateHasChanged);
+            }
+        }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}

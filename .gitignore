@@ -1,0 +1,32 @@
+## .NET Core Build Outputs ##
+bin/
+obj/
+
+## IDE and Editor Files ##
+.vs/
+.vscode/
+.ionide/
+*.user
+*.userosscache
+*.sln.docstates
+
+## OS Generated Files ##
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+## Project Specific ##
+# Environment variables (sensitive data)
+.env
+appsettings.Development.json
+
+## Debug and Release Folders ##
+**/Debug/
+**/Release/
+
+## Temporary Files ##
+*.swp
+*.swo
+*~
+*.cache

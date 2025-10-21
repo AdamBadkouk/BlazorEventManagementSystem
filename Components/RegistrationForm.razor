@@ -1,0 +1,109 @@
+@using EventEase.Models
+
+<div class="registration-form-container">
+    <h3>Register for Event</h3>
+
+    <EditForm Model="@Registration" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+
+        <div class="form-group">
+            <label for="fullName">Full Name *</label>
+            <InputText id="fullName" @bind-Value="Registration.FullName" class="form-control" placeholder="John Doe" />
+            <ValidationMessage For="@(() => Registration.FullName)" />
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email Address *</label>
+            <InputText id="email" type="email" @bind-Value="Registration.Email" class="form-control" placeholder="john.doe@example.com" />
+            <ValidationMessage For="@(() => Registration.Email)" />
+        </div>
+
+        <div class="form-group">
+            <label for="phone">Phone Number *</label>
+            <InputText id="phone" @bind-Value="Registration.Phone" class="form-control" placeholder="+1 (555) 123-4567" />
+            <ValidationMessage For="@(() => Registration.Phone)" />
+        </div>
+
+        <div class="form-group">
+            <label for="tickets">Number of Tickets *</label>
+            <InputNumber id="tickets" @bind-Value="Registration.NumberOfTickets" class="form-control" min="1" max="10" />
+            <ValidationMessage For="@(() => Registration.NumberOfTickets)" />
+            <small class="form-text">Available spots: @AvailableSpots</small>
+        </div>
+
+        <div class="form-group">
+            <label for="requirements">Special Requirements (Optional)</label>
+            <InputTextArea id="requirements" @bind-Value="Registration.SpecialRequirements" class="form-control" rows="3" placeholder="Dietary restrictions, accessibility needs, etc." />
+            <ValidationMessage For="@(() => Registration.SpecialRequirements)" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-error">
+                @ErrorMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(SuccessMessage))
+        {
+            <div class="alert alert-success">
+                @SuccessMessage
+            </div>
+        }
+
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" @onclick="OnCancel">Cancel</button>
+            <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+                @(IsSubmitting ? "Submitting..." : "Complete Registration")
+            </button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    public Registration Registration { get; set; } = new();
+
+    [Parameter]
+    public int AvailableSpots { get; set; }
+
+    [Parameter]
+    public EventCallback<Registration> OnValidSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private bool IsSubmitting { get; set; }
+    private string ErrorMessage { get; set; } = string.Empty;
+    private string SuccessMessage { get; set; } = string.Empty;
+
+    private async Task HandleValidSubmit()
+    {
+        ErrorMessage = string.Empty;
+        SuccessMessage = string.Empty;
+
+        if (Registration.NumberOfTickets > AvailableSpots)
+        {
+            ErrorMessage = $"Only {AvailableSpots} spots available. Please reduce the number of tickets.";
+            return;
+        }
+
+        IsSubmitting = true;
+        await Task.Delay(500);
+
+        try
+        {
+            await OnValidSubmit.InvokeAsync(Registration);
+            SuccessMessage = "Registration successful! Redirecting...";
+            await Task.Delay(1500);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Registration failed: {ex.Message}";
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+}

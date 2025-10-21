@@ -1,0 +1,180 @@
+@page "/event-details/{EventId:int}"
+@inject EventService EventService
+@inject UserSessionService SessionService
+@inject NavigationManager Navigation
+
+<PageTitle>@(Event?.Name ?? "Event Details") - EventEase</PageTitle>
+
+@if (Event == null)
+{
+    <div class="loading">
+        <span class="spinner"></span>
+        <p>Loading event details...</p>
+    </div>
+}
+else
+{
+    <div class="event-details-page">
+        <button class="btn btn-link back-button" @onclick="GoBack">← Back to Events</button>
+
+        <div class="event-hero">
+            <img src="@Event.ImageUrl" alt="@Event.Name" class="hero-image" />
+            <div class="hero-overlay">
+                <span class="category-badge">@Event.Category</span>
+                <h1>@Event.Name</h1>
+            </div>
+        </div>
+
+        <div class="event-details-content">
+            <div class="details-main">
+                <section class="section">
+                    <h2>About This Event</h2>
+                    <p class="description">@Event.Description</p>
+                </section>
+
+                <section class="section">
+                    <h2>Event Information</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-icon">📅</span>
+                            <div>
+                                <strong>Date & Time</strong>
+                                <p>@Event.Date.ToString("dddd, MMMM dd, yyyy")</p>
+                                <p>@Event.Date.ToString("hh:mm tt")</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">📍</span>
+                            <div>
+                                <strong>Location</strong>
+                                <p>@Event.Location</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">👥</span>
+                            <div>
+                                <strong>Capacity</strong>
+                                <p>@Event.CurrentAttendees / @Event.MaxAttendees attendees</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">🎟️</span>
+                            <div>
+                                <strong>Available Spots</strong>
+                                <p class="@(Event.AvailableSpots <= 10 ? "urgent-text" : "")">
+                                    @Event.AvailableSpots spots remaining
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2>Real-Time Attendance</h2>
+                    <AttendanceTracker EventId="@Event.Id"
+                                      CurrentAttendees="@Event.CurrentAttendees"
+                                      MaxAttendees="@Event.MaxAttendees" />
+                </section>
+
+                @if (Event.Registrations.Any())
+                {
+                    <section class="section">
+                        <h2>Recent Registrations</h2>
+                        <div class="registrations-list">
+                            @foreach (var reg in Event.Registrations.OrderByDescending(r => r.RegistrationDate).Take(5))
+                            {
+                                <div class="registration-item">
+                                    <div class="registration-avatar">@reg.FullName.Substring(0, 1)</div>
+                                    <div class="registration-info">
+                                        <strong>@reg.FullName</strong>
+                                        <small>@reg.NumberOfTickets ticket(s) - @reg.RegistrationDate.ToString("MMM dd, hh:mm tt")</small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+
+            <div class="details-sidebar">
+                @if (SessionService.IsRegisteredForEvent(EventId))
+                {
+                    <div class="alert alert-success">
+                        <span class="alert-icon">✓</span>
+                        <strong>You're registered!</strong>
+                        <p>See you at the event!</p>
+                    </div>
+                }
+                else if (Event.IsFull)
+                {
+                    <div class="alert alert-error">
+                        <span class="alert-icon">✕</span>
+                        <strong>Event Full</strong>
+                        <p>This event has reached maximum capacity.</p>
+                    </div>
+                }
+                else if (!ShowRegistrationForm)
+                {
+                    <div class="registration-cta">
+                        <h3>Ready to Join?</h3>
+                        <p>Register now to secure your spot at this amazing event!</p>
+                        <button class="btn btn-primary btn-large" @onclick="() => ShowRegistrationForm = true">
+                            Register Now
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <RegistrationForm Registration="@NewRegistration"
+                                     AvailableSpots="@Event.AvailableSpots"
+                                     OnValidSubmit="@HandleRegistration"
+                                     OnCancel="@(() => ShowRegistrationForm = false)" />
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int EventId { get; set; }
+
+    private Event? Event { get; set; }
+    private Registration NewRegistration = new();
+    private bool ShowRegistrationForm = false;
+
+    protected override void OnInitialized()
+    {
+        Event = EventService.GetEventById(EventId);
+
+        if (Event == null)
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task HandleRegistration(Registration registration)
+    {
+        if (Event == null) return;
+
+        var success = EventService.RegisterForEvent(EventId, registration);
+
+        if (success)
+        {
+            SessionService.AddRegisteredEvent(EventId);
+            SessionService.UserName = registration.FullName;
+
+            Event = EventService.GetEventById(EventId);
+            ShowRegistrationForm = false;
+            NewRegistration = new Registration();
+
+            await Task.Delay(100);
+            StateHasChanged();
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/");
+    }
+}
